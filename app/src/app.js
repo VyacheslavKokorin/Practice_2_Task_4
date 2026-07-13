@@ -2,6 +2,7 @@ const express = require("express");
 const session = require("express-session");
 const db = require("./db");
 const authRoutes = require("./routes/auth");
+const booksRoutes = require("./routes/books");
 
 const app = express();
 const PORT = 3000;
@@ -17,6 +18,7 @@ app.use(
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
 app.use(authRoutes);
+app.use(booksRoutes);
 
 app.get("/", (req, res) => {
   try {
