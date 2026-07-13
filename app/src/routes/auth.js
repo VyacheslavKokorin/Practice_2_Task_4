@@ -54,4 +54,51 @@ router.post("/register", async (req, res) => {
   }
 });
 
+router.get("/login", (req, res) => {
+  res.send(`
+    <h1>Вход</h1>
+    <form method="POST" action="/login">
+      <div>
+        <label>Email</label>
+        <input type="email" name="email" required>
+      </div>
+      <div>
+        <label>Пароль</label>
+        <input type="password" name="password" required>
+      </div>
+      <button type="submit">Войти</button>
+    </form>
+    <p><a href="/">Вернуться на главную</a></p>
+  `);
+});
+
+router.post("/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    const user = db
+      .prepare("SELECT * FROM users WHERE email = ?")
+      .get(email);
+
+    if (!user) {
+      return res.status(400).send("Неверный email или пароль");
+    }
+
+    const passwordIsCorrect = await bcrypt.compare(password, user.password_hash);
+
+    if (!passwordIsCorrect) {
+      return res.status(400).send("Неверный email или пароль");
+    }
+
+    req.session.userId = user.id;
+    req.session.username = user.username;
+    req.session.role = user.role;
+
+    res.redirect("/");
+  } catch (error) {
+    console.error("Ошибка входа:", error.message);
+    res.status(500).send("Не удалось выполнить вход");
+  }
+});
+
 module.exports = router;
