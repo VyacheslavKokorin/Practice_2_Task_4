@@ -22,6 +22,25 @@ app.use(booksRoutes);
 
 app.get("/", (req, res) => {
   try {
+    const sort = req.query.sort;
+    let orderBy = "books.title ASC";
+
+    if (sort === "author") {
+      orderBy = "authors.name ASC";
+    }
+
+    if (sort === "category") {
+      orderBy = "categories.name ASC";
+    }
+
+    if (sort === "year-new") {
+      orderBy = "books.writing_year DESC";
+    }
+
+    if (sort === "year-old") {
+      orderBy = "books.writing_year ASC";
+    }
+
     const books = db
       .prepare(`
         SELECT books.id, books.title, books.writing_year, books.price,
@@ -30,7 +49,7 @@ app.get("/", (req, res) => {
         FROM books
         JOIN authors ON books.author_id = authors.id
         JOIN categories ON books.category_id = categories.id
-        ORDER BY books.title
+        ORDER BY ${orderBy}
       `)
       .all();
 
@@ -43,6 +62,19 @@ app.get("/", (req, res) => {
     }
 
     html += "<h2>Каталог книг</h2>";
+    html += `
+      <form method="GET" action="/">
+        <label for="sort">Сортировка:</label>
+        <select id="sort" name="sort">
+          <option value="title">По названию</option>
+          <option value="author">По автору</option>
+          <option value="category">По категории</option>
+          <option value="year-new">Сначала новые</option>
+          <option value="year-old">Сначала старые</option>
+        </select>
+        <button type="submit">Применить</button>
+      </form>
+    `;
 
     for (const book of books) {
       html += `
