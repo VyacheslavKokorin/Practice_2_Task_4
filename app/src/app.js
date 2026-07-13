@@ -1,6 +1,7 @@
 const express = require("express");
 const session = require("express-session");
 const db = require("./db");
+const authRoutes = require("./routes/auth");
 
 const app = express();
 const PORT = 3000;
@@ -15,6 +16,7 @@ app.use(
 
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
+app.use(authRoutes);
 
 app.get("/", (req, res) => {
   res.send("<h1>Книжный магазин</h1><p>Приложение работает</p>");
