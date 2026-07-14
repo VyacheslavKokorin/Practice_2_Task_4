@@ -22,17 +22,60 @@ router.get("/books/:id", (req, res) => {
 
     let purchaseMessage = "";
     let purchaseForm = "";
+    let rentalForm = "";
+    let userPurchase;
+    let activeRental;
 
     if (req.query.purchased === "yes") {
       purchaseMessage = "<p>Книга успешно куплена.</p>";
     }
 
-    if (req.session.userId && book.is_available) {
+    if (req.query.rented === "yes") {
+      purchaseMessage = "<p>Книга успешно арендована.</p>";
+    }
+
+    if (req.session.userId) {
+      userPurchase = db
+        .prepare("SELECT id FROM purchases WHERE user_id = ? AND book_id = ?")
+        .get(req.session.userId, book.id);
+
+      activeRental = db
+        .prepare(`
+          SELECT id, end_date FROM rentals
+          WHERE user_id = ? AND book_id = ? AND status = 'active'
+          ORDER BY end_date DESC
+        `)
+        .get(req.session.userId, book.id);
+
+      if (activeRental && new Date(activeRental.end_date) <= new Date()) {
+        activeRental = undefined;
+      }
+    }
+
+    if (req.session.userId && book.is_available && !userPurchase) {
+      const twoWeeksPrice = (book.price * 0.2).toFixed(2);
+      const monthPrice = (book.price * 0.3).toFixed(2);
+      const threeMonthsPrice = (book.price * 0.5).toFixed(2);
+
       purchaseForm = `
         <form method="POST" action="/books/${book.id}/buy">
           <button type="submit">Купить за ${book.price} руб.</button>
         </form>
       `;
+
+      if (!activeRental) {
+        rentalForm = `
+          <form method="POST" action="/books/${book.id}/rent">
+            <label for="period">Срок аренды:</label>
+            <select id="period" name="period">
+              <option value="two-weeks">2 недели — ${twoWeeksPrice} руб.</option>
+              <option value="month">1 месяц — ${monthPrice} руб.</option>
+              <option value="three-months">3 месяца — ${threeMonthsPrice} руб.</option>
+            </select>
+            <button type="submit">Арендовать</button>
+          </form>
+        `;
+      }
     }
 
     res.send(`
@@ -48,6 +91,7 @@ router.get("/books/:id", (req, res) => {
       <h2>Чтение книги</h2>
       <p>${book.book_text}</p>
       ${purchaseForm}
+      ${rentalForm}
       <p><a href="/">Вернуться к каталогу</a></p>
     `);
   } catch (error) {
@@ -107,6 +151,103 @@ router.post("/books/:id/buy", requireAuth, (req, res) => {
   } catch (error) {
     console.error("Ошибка покупки книги:", error.message);
     res.status(500).send("Не удалось купить книгу");
+  }
+});
+
+router.post("/books/:id/rent", requireAuth, (req, res) => {
+  try {
+    const book = db
+      .prepare("SELECT * FROM books WHERE id = ?")
+      .get(req.params.id);
+
+    if (!book) {
+      return res.status(404).send("Книга не найдена");
+    }
+
+    if (!book.is_available) {
+      return res.status(400).send("Книга сейчас недоступна");
+    }
+
+    let days;
+    let rentalPrice;
+    let periodName;
+
+    if (req.body.period === "two-weeks") {
+      days = 14;
+      rentalPrice = book.price * 0.2;
+      periodName = "2 недели";
+    } else if (req.body.period === "month") {
+      days = 30;
+      rentalPrice = book.price * 0.3;
+      periodName = "1 месяц";
+    } else if (req.body.period === "three-months") {
+      days = 90;
+      rentalPrice = book.price * 0.5;
+      periodName = "3 месяца";
+    } else {
+      return res.status(400).send("Выбран неверный срок аренды");
+    }
+
+    rentalPrice = Math.round(rentalPrice * 100) / 100;
+
+    const purchase = db
+      .prepare("SELECT id FROM purchases WHERE user_id = ? AND book_id = ?")
+      .get(req.session.userId, book.id);
+
+    if (purchase) {
+      return res.status(400).send("Эта книга уже куплена");
+    }
+
+    const rental = db
+      .prepare(`
+        SELECT id, end_date FROM rentals
+        WHERE user_id = ? AND book_id = ? AND status = 'active'
+        ORDER BY end_date DESC
+      `)
+      .get(req.session.userId, book.id);
+
+    if (rental && new Date(rental.end_date) > new Date()) {
+      return res.status(400).send("У вас уже есть действующая аренда этой книги");
+    }
+
+    const user = db
+      .prepare("SELECT balance FROM users WHERE id = ?")
+      .get(req.session.userId);
+
+    if (user.balance < rentalPrice) {
+      return res.status(400).send("Недостаточно денег на балансе");
+    }
+
+    const endDate = new Date();
+    endDate.setDate(endDate.getDate() + days);
+
+    db.exec("BEGIN TRANSACTION");
+
+    try {
+      db.prepare("UPDATE users SET balance = balance - ? WHERE id = ?")
+        .run(rentalPrice, req.session.userId);
+
+      db.prepare(`
+        INSERT INTO rentals (user_id, book_id, rental_period, price, end_date)
+        VALUES (?, ?, ?, ?, ?)
+      `).run(
+        req.session.userId,
+        book.id,
+        periodName,
+        rentalPrice,
+        endDate.toISOString()
+      );
+
+      db.exec("COMMIT");
+    } catch (error) {
+      db.exec("ROLLBACK");
+      throw error;
+    }
+
+    res.redirect(`/books/${book.id}?rented=yes`);
+  } catch (error) {
+    console.error("Ошибка аренды книги:", error.message);
+    res.status(500).send("Не удалось арендовать книгу");
   }
 });
 
