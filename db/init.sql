@@ -74,6 +74,17 @@ CREATE TABLE IF NOT EXISTS notifications (
     FOREIGN KEY (rental_id) REFERENCES rentals(id) ON DELETE CASCADE
 );
 
+INSERT OR IGNORE INTO users
+    (username, email, password_hash, role, balance)
+VALUES
+    (
+        'admin',
+        'admin@bookstore.ru',
+        '$2b$10$ZiZmm7LhMKT2m1dBJ5DnwuNRRmrF3CAVUhq4ZSIk7O2SnkFZviw6e',
+        'admin',
+        0
+    );
+
 INSERT OR IGNORE INTO categories (id, name) VALUES
     (1, 'Фэнтези'),
     (2, 'Приключения');
