@@ -56,7 +56,10 @@ app.get("/", (req, res) => {
     let html = "<h1>Книжный магазин</h1>";
 
     if (req.session.userId) {
-      html += `<p>Вы вошли как ${req.session.username}. <a href="/logout">Выйти</a></p>`;
+      html += `
+        <p>Вы вошли как ${req.session.username}.</p>
+        <p><a href="/my-books">Мои книги</a> | <a href="/logout">Выйти</a></p>
+      `;
     } else {
       html += '<p><a href="/register">Регистрация</a> | <a href="/login">Вход</a></p>';
     }

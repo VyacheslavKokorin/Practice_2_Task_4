@@ -251,4 +251,84 @@ router.post("/books/:id/rent", requireAuth, (req, res) => {
   }
 });
 
+router.get("/my-books", requireAuth, (req, res) => {
+  try {
+    db.prepare(`
+      UPDATE rentals
+      SET status = 'expired'
+      WHERE user_id = ? AND status = 'active' AND end_date <= ?
+    `).run(req.session.userId, new Date().toISOString());
+
+    const user = db
+      .prepare("SELECT username, balance FROM users WHERE id = ?")
+      .get(req.session.userId);
+
+    const purchases = db
+      .prepare(`
+        SELECT books.id, books.title, authors.name AS author,
+               purchases.price, purchases.purchased_at
+        FROM purchases
+        JOIN books ON purchases.book_id = books.id
+        JOIN authors ON books.author_id = authors.id
+        WHERE purchases.user_id = ?
+        ORDER BY purchases.purchased_at DESC
+      `)
+      .all(req.session.userId);
+
+    const rentals = db
+      .prepare(`
+        SELECT books.id, books.title, authors.name AS author,
+               rentals.rental_period, rentals.price, rentals.end_date
+        FROM rentals
+        JOIN books ON rentals.book_id = books.id
+        JOIN authors ON books.author_id = authors.id
+        WHERE rentals.user_id = ? AND rentals.status = 'active'
+        ORDER BY rentals.end_date
+      `)
+      .all(req.session.userId);
+
+    let html = `<h1>Мои книги</h1>`;
+    html += `<p>Пользователь: ${user.username}</p>`;
+    html += `<p>Баланс: ${user.balance.toFixed(2)} руб.</p>`;
+    html += "<h2>Купленные книги</h2>";
+
+    if (purchases.length === 0) {
+      html += "<p>У вас пока нет купленных книг.</p>";
+    } else {
+      for (const purchase of purchases) {
+        html += `
+          <article>
+            <h3><a href="/books/${purchase.id}">${purchase.title}</a></h3>
+            <p>Автор: ${purchase.author}</p>
+            <p>Цена покупки: ${purchase.price} руб.</p>
+          </article>
+        `;
+      }
+    }
+
+    html += "<h2>Арендованные книги</h2>";
+
+    if (rentals.length === 0) {
+      html += "<p>У вас нет действующих аренд.</p>";
+    } else {
+      for (const rental of rentals) {
+        html += `
+          <article>
+            <h3><a href="/books/${rental.id}">${rental.title}</a></h3>
+            <p>Автор: ${rental.author}</p>
+            <p>Срок: ${rental.rental_period}</p>
+            <p>Аренда действует до: ${new Date(rental.end_date).toLocaleString("ru-RU")}</p>
+          </article>
+        `;
+      }
+    }
+
+    html += '<p><a href="/">Вернуться к каталогу</a></p>';
+    res.send(html);
+  } catch (error) {
+    console.error("Ошибка получения библиотеки пользователя:", error.message);
+    res.status(500).send("Не удалось получить список книг пользователя");
+  }
+});
+
 module.exports = router;
