@@ -3,6 +3,7 @@ const session = require("express-session");
 const db = require("./db");
 const authRoutes = require("./routes/auth");
 const booksRoutes = require("./routes/books");
+const adminRoutes = require("./routes/admin");
 
 const app = express();
 const PORT = 3000;
@@ -19,6 +20,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
 app.use(authRoutes);
 app.use(booksRoutes);
+app.use(adminRoutes);
 
 app.get("/", (req, res) => {
   try {
@@ -60,6 +62,10 @@ app.get("/", (req, res) => {
         <p>Вы вошли как ${req.session.username}.</p>
         <p><a href="/my-books">Мои книги</a> | <a href="/logout">Выйти</a></p>
       `;
+
+      if (req.session.role === "admin") {
+        html += '<p><a href="/admin">Панель администратора</a></p>';
+      }
     } else {
       html += '<p><a href="/register">Регистрация</a> | <a href="/login">Вход</a></p>';
     }
