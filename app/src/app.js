@@ -4,6 +4,7 @@ const db = require("./db");
 const authRoutes = require("./routes/auth");
 const booksRoutes = require("./routes/books");
 const adminRoutes = require("./routes/admin");
+const startRentalReminders = require("./utils/rentalReminders");
 
 const app = express();
 const PORT = 3000;
@@ -122,6 +123,8 @@ app.get("/db-check", (req, res) => {
     });
   }
 });
+
+startRentalReminders();
 
 app.listen(PORT, () => {
   console.log(`Server started on port ${PORT}`);
