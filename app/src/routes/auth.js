@@ -1,11 +1,12 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
 const db = require("../db");
+const layout = require("../views/layout");
 
 const router = express.Router();
 
 router.get("/register", (req, res) => {
-  res.send(`
+  const html = `
     <h1>Регистрация</h1>
     <form method="POST" action="/register">
       <div>
@@ -23,7 +24,9 @@ router.get("/register", (req, res) => {
       <button type="submit">Зарегистрироваться</button>
     </form>
     <p><a href="/">Вернуться на главную</a></p>
-  `);
+  `;
+
+  res.send(layout("Регистрация", html, req));
 });
 
 router.post("/register", async (req, res) => {
@@ -55,7 +58,7 @@ router.post("/register", async (req, res) => {
 });
 
 router.get("/login", (req, res) => {
-  res.send(`
+  const html = `
     <h1>Вход</h1>
     <form method="POST" action="/login">
       <div>
@@ -69,7 +72,9 @@ router.get("/login", (req, res) => {
       <button type="submit">Войти</button>
     </form>
     <p><a href="/">Вернуться на главную</a></p>
-  `);
+  `;
+
+  res.send(layout("Вход", html, req));
 });
 
 router.post("/login", async (req, res) => {

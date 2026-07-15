@@ -6,6 +6,7 @@ const booksRoutes = require("./routes/books");
 const adminRoutes = require("./routes/admin");
 const notificationsRoutes = require("./routes/notifications");
 const startRentalReminders = require("./utils/rentalReminders");
+const layout = require("./views/layout");
 
 const app = express();
 const PORT = 3000;
@@ -69,20 +70,7 @@ app.get("/", (req, res) => {
         `)
         .get(req.session.userId);
 
-      html += `
-        <p>Вы вошли как ${req.session.username}.</p>
-        <p>
-          <a href="/my-books">Мои книги</a> |
-          <a href="/notifications">Уведомления (${unreadNotifications.count})</a> |
-          <a href="/logout">Выйти</a>
-        </p>
-      `;
-
-      if (req.session.role === "admin") {
-        html += '<p><a href="/admin">Панель администратора</a></p>';
-      }
-    } else {
-      html += '<p><a href="/register">Регистрация</a> | <a href="/login">Вход</a></p>';
+      html += `<p>Непрочитанных уведомлений: ${unreadNotifications.count}</p>`;
     }
 
     html += "<h2>Каталог книг</h2>";
@@ -115,7 +103,7 @@ app.get("/", (req, res) => {
       `;
     }
 
-    res.send(html);
+    res.send(layout("Каталог книг", html, req));
   } catch (error) {
     console.error("Ошибка получения книг:", error.message);
     res.status(500).send("Не удалось получить список книг");
