@@ -4,6 +4,7 @@ const db = require("./db");
 const authRoutes = require("./routes/auth");
 const booksRoutes = require("./routes/books");
 const adminRoutes = require("./routes/admin");
+const notificationsRoutes = require("./routes/notifications");
 const startRentalReminders = require("./utils/rentalReminders");
 
 const app = express();
@@ -22,6 +23,7 @@ app.use(express.static("public"));
 app.use(authRoutes);
 app.use(booksRoutes);
 app.use(adminRoutes);
+app.use(notificationsRoutes);
 
 app.get("/", (req, res) => {
   try {
@@ -59,9 +61,21 @@ app.get("/", (req, res) => {
     let html = "<h1>Книжный магазин</h1>";
 
     if (req.session.userId) {
+      const unreadNotifications = db
+        .prepare(`
+          SELECT COUNT(1) AS count
+          FROM notifications
+          WHERE user_id = ? AND is_read = 0
+        `)
+        .get(req.session.userId);
+
       html += `
         <p>Вы вошли как ${req.session.username}.</p>
-        <p><a href="/my-books">Мои книги</a> | <a href="/logout">Выйти</a></p>
+        <p>
+          <a href="/my-books">Мои книги</a> |
+          <a href="/notifications">Уведомления (${unreadNotifications.count})</a> |
+          <a href="/logout">Выйти</a>
+        </p>
       `;
 
       if (req.session.role === "admin") {
