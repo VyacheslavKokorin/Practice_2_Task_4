@@ -32,6 +32,9 @@ router.get("/admin", requireAdmin, (req, res) => {
           <p>Статус: ${book.status}</p>
           <p>Доступность: ${book.is_available ? "Доступна" : "Недоступна"}</p>
           <p><a href="/admin/books/${book.id}/edit">Изменить</a></p>
+          <form method="POST" action="/admin/books/${book.id}/delete" onsubmit="return confirm('Удалить книгу?')">
+            <button type="submit">Удалить</button>
+          </form>
           <hr>
         </article>
       `;
@@ -204,6 +207,23 @@ router.post("/admin/books/:id/edit", requireAdmin, (req, res) => {
   } catch (error) {
     console.error("Ошибка изменения книги:", error.message);
     res.status(500).send("Не удалось изменить книгу");
+  }
+});
+
+router.post("/admin/books/:id/delete", requireAdmin, (req, res) => {
+  try {
+    const result = db
+      .prepare("DELETE FROM books WHERE id = ?")
+      .run(req.params.id);
+
+    if (result.changes === 0) {
+      return res.status(404).send("Книга не найдена");
+    }
+
+    res.redirect("/admin");
+  } catch (error) {
+    console.error("Ошибка удаления книги:", error.message);
+    res.status(500).send("Не удалось удалить книгу");
   }
 });
 
