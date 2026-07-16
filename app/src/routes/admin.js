@@ -1,6 +1,7 @@
 const express = require("express");
 const db = require("../db");
 const requireAdmin = require("../middleware/adminMiddleware");
+const layout = require("../views/layout");
 
 const router = express.Router();
 
@@ -41,7 +42,7 @@ router.get("/admin", requireAdmin, (req, res) => {
     }
 
     html += '<p><a href="/">Вернуться на главную</a></p>';
-    res.send(html);
+    res.send(layout("Панель администратора", html, req));
   } catch (error) {
     console.error("Ошибка получения списка книг для администратора:", error.message);
     res.status(500).send("Не удалось получить список книг");
@@ -49,7 +50,7 @@ router.get("/admin", requireAdmin, (req, res) => {
 });
 
 router.get("/admin/books/create", requireAdmin, (req, res) => {
-  res.send(`
+  const html = `
     <h1>Добавление книги</h1>
     <form method="POST" action="/admin/books/create">
       <div>
@@ -83,7 +84,9 @@ router.get("/admin/books/create", requireAdmin, (req, res) => {
       <button type="submit">Добавить</button>
     </form>
     <p><a href="/admin">Вернуться в панель администратора</a></p>
-  `);
+  `;
+
+  res.send(layout("Добавление книги", html, req));
 });
 
 router.post("/admin/books/create", requireAdmin, (req, res) => {
@@ -154,7 +157,7 @@ router.get("/admin/books/:id/edit", requireAdmin, (req, res) => {
       return res.status(404).send("Книга не найдена");
     }
 
-    res.send(`
+    const html = `
       <h1>Изменение книги</h1>
       <h2>${book.title}</h2>
       <form method="POST" action="/admin/books/${book.id}/edit">
@@ -180,7 +183,9 @@ router.get("/admin/books/:id/edit", requireAdmin, (req, res) => {
         <button type="submit">Сохранить</button>
       </form>
       <p><a href="/admin">Вернуться в панель администратора</a></p>
-    `);
+    `;
+
+    res.send(layout("Изменение книги", html, req));
   } catch (error) {
     console.error("Ошибка получения книги для изменения:", error.message);
     res.status(500).send("Не удалось получить книгу");

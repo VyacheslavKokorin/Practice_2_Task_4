@@ -1,6 +1,7 @@
 const express = require("express");
 const db = require("../db");
 const requireAuth = require("../middleware/authMiddleware");
+const layout = require("../views/layout");
 
 const router = express.Router();
 
@@ -38,7 +39,7 @@ router.get("/notifications", requireAuth, (req, res) => {
     }
 
     html += '<p><a href="/">Вернуться на главную</a></p>';
-    res.send(html);
+    res.send(layout("Уведомления", html, req));
   } catch (error) {
     console.error("Ошибка получения уведомлений:", error.message);
     res.status(500).send("Не удалось получить уведомления");

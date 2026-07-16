@@ -1,6 +1,7 @@
 const express = require("express");
 const db = require("../db");
 const requireAuth = require("../middleware/authMiddleware");
+const layout = require("../views/layout");
 
 const router = express.Router();
 
@@ -78,7 +79,7 @@ router.get("/books/:id", (req, res) => {
       }
     }
 
-    res.send(`
+    const html = `
       <h1>${book.title}</h1>
       ${purchaseMessage}
       <p>Автор: ${book.author}</p>
@@ -93,7 +94,9 @@ router.get("/books/:id", (req, res) => {
       ${purchaseForm}
       ${rentalForm}
       <p><a href="/">Вернуться к каталогу</a></p>
-    `);
+    `;
+
+    res.send(layout(book.title, html, req));
   } catch (error) {
     console.error("Ошибка получения книги:", error.message);
     res.status(500).send("Не удалось получить книгу");
@@ -324,7 +327,7 @@ router.get("/my-books", requireAuth, (req, res) => {
     }
 
     html += '<p><a href="/">Вернуться к каталогу</a></p>';
-    res.send(html);
+    res.send(layout("Мои книги", html, req));
   } catch (error) {
     console.error("Ошибка получения библиотеки пользователя:", error.message);
     res.status(500).send("Не удалось получить список книг пользователя");
